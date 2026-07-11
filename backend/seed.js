@@ -61,7 +61,8 @@ const run = async () => {
         name: `${vendor.businessName.split(" ")[0]} Item ${i + 1}`,
         category: vendor.category,
         price: randomInt(199, 4999),
-        stock: randomInt(10, 200)
+        stock: randomInt(10, 200),
+        imageUrl: `https://picsum.photos/seed/${encodeURIComponent(vendor.businessName)}${i}/300/300`
       });
     }
   });

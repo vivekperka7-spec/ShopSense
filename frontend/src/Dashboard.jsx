@@ -112,7 +112,15 @@ export default function Dashboard() {
             <tbody>
               {data.productPerformance.slice(0, 8).map((p, i) => (
                 <tr key={p.name}>
-                  <td><span className="rank">{i + 1}</span>{p.name}</td>
+                  <td style={{ display: "flex", alignItems: "center" }}>
+                    <span className="rank">{i + 1}</span>
+                    {p.imageUrl ? (
+                      <img src={p.imageUrl} alt={p.name} className="thumb" style={{ marginRight: 10 }} />
+                    ) : (
+                      <div className="thumb thumb-fallback" style={{ marginRight: 10 }}>{p.name.charAt(0)}</div>
+                    )}
+                    {p.name}
+                  </td>
                   <td>
                     <div className="qty-row">
                       <div className="qty-bar-track">

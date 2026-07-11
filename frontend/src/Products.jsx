@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-const EMPTY_FORM = { vendorId: "", name: "", category: "", price: "", stock: "" };
+const EMPTY_FORM = { vendorId: "", name: "", category: "", price: "", stock: "", imageUrl: "" };
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -30,7 +30,8 @@ export default function Products() {
       name: p.name,
       category: p.category || "",
       price: p.price,
-      stock: p.stock
+      stock: p.stock,
+      imageUrl: p.imageUrl || ""
     });
   };
 
@@ -96,6 +97,7 @@ export default function Products() {
             <Field label="Category" value={form.category} onChange={handleChange("category")} />
             <Field label="Price (\u20b9)" type="number" value={form.price} onChange={handleChange("price")} required />
             <Field label="Stock" type="number" value={form.stock} onChange={handleChange("stock")} required />
+            <Field label="Image URL" value={form.imageUrl} onChange={handleChange("imageUrl")} placeholder="https://..." />
 
             {error && (
               <div style={{ background: "var(--red-soft)", color: "var(--red)", borderRadius: 8, padding: "10px 12px", fontSize: 13 }}>
@@ -132,11 +134,18 @@ export default function Products() {
           ) : (
             <table>
               <thead>
-                <tr><th>Product</th><th>Vendor</th><th>Price</th><th>Stock</th><th></th></tr>
+                <tr><th></th><th>Product</th><th>Vendor</th><th>Price</th><th>Stock</th><th></th></tr>
               </thead>
               <tbody>
                 {products.map((p) => (
                   <tr key={p._id}>
+                    <td style={{ width: 44 }}>
+                      {p.imageUrl ? (
+                        <img src={p.imageUrl} alt={p.name} className="thumb" />
+                      ) : (
+                        <div className="thumb thumb-fallback">{p.name.charAt(0)}</div>
+                      )}
+                    </td>
                     <td>{p.name}</td>
                     <td style={{ color: "var(--ink-faint)" }}>{p.vendorId?.businessName || "—"}</td>
                     <td className="mono">&#8377;{p.price.toLocaleString("en-IN")}</td>

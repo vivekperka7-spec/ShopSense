@@ -1,18 +1,25 @@
 import React, { useState } from "react";
+import Landing from "./Landing.jsx";
 import Dashboard from "./Dashboard.jsx";
 import Vendors from "./Vendors.jsx";
 import Products from "./Products.jsx";
+import Logo from "./Logo.jsx";
 
 const NAV = ["Dashboard", "Vendors", "Products", "Transactions"];
 
 export default function App() {
+  const [entered, setEntered] = useState(false);
   const [page, setPage] = useState("Dashboard");
+
+  if (!entered) {
+    return <Landing onEnter={() => setEntered(true)} />;
+  }
 
   return (
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">SS</div>
+          <Logo size={28} />
           <div className="brand-name">ShopSense</div>
         </div>
         <nav className="nav">

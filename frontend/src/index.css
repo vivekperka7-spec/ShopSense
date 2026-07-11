@@ -110,3 +110,46 @@ tr:last-child td { border-bottom: none; }
 
 .skeleton { background: linear-gradient(90deg, var(--line) 25%, #f0efe9 37%, var(--line) 63%); background-size: 400% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
 @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+/* Landing / entry gate - centered, no marketing panel */
+.landing-centered {
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: var(--bg); padding: 24px;
+}
+.landing-brand-center { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 32px; }
+.landing-brand-name { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; margin-top: 4px; }
+.landing-brand-tag { font-size: 13px; color: var(--ink-faint); }
+
+.landing-features { display: flex; flex-direction: column; gap: 18px; }
+.landing-feature { display: flex; gap: 12px; align-items: flex-start; }
+.landing-feature-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex-shrink: 0; }
+.landing-feature-title { font-size: 14px; font-weight: 600; }
+.landing-feature-desc { font-size: 13px; color: var(--ink-faint); }
+
+.landing-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  padding: 40px 36px; width: 100%; max-width: 380px;
+  box-shadow: 0 20px 60px -20px rgba(19,26,38,0.18);
+}
+.landing-card h2 { font-size: 22px; font-weight: 700; margin: 0 0 6px; }
+.landing-card .sub { font-size: 13px; color: var(--ink-faint); margin-bottom: 28px; }
+.landing-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+.landing-field label { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+.landing-field input {
+  border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px;
+  font-size: 14px; font-family: var(--font-ui);
+}
+.landing-field input:focus { outline: none; border-color: var(--accent); }
+.landing-submit {
+  width: 100%; background: var(--navy); color: #fff; border: none; border-radius: 8px;
+  padding: 12px 16px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 6px;
+}
+.landing-footer { text-align: center; font-size: 13px; color: var(--ink-faint); margin-top: 22px; }
+.landing-footer a { color: var(--accent); font-weight: 600; cursor: pointer; }
+
+/* Product thumbnails */
+.thumb { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; display: block; }
+.thumb-fallback {
+  background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; font-family: var(--font-ui);
+}

@@ -90,7 +90,7 @@ export const baselineAnalytics = async (req, res) => {
         }
       },
       { $unwind: "$product" },
-      { $project: { _id: 0, name: "$product.name", quantitySold: 1 } },
+      { $project: { _id: 0, name: "$product.name", imageUrl: "$product.imageUrl", quantitySold: 1 } },
       { $sort: { quantitySold: -1 } }
     ])
   ]);
