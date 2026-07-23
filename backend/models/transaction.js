@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const transactionSchema = new mongoose.Schema({
   vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor", required: true },
   productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+  customerId: { type: String, default: "guest@shopsense.dev" }, // email from Customer login - powers segmentation & recommendations
   quantity: { type: Number, required: true },
   unitPrice: { type: Number, required: true },
   totalAmount: { type: Number, required: true }, // quantity * unitPrice, stored for fast aggregation

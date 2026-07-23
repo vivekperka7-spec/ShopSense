@@ -1,10 +1,29 @@
 import Transaction from "../models/transaction.js";
+import Product from "../models/product.js";
+import Inventory from "../models/inventory.js";
 
 export const createTransaction = async (req, res) => {
   try {
-    const { quantity, unitPrice } = req.body;
+    const { productId, quantity, unitPrice } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ error: "Product not found" });
+    if (product.stock < quantity) {
+      return res.status(400).json({ error: `Only ${product.stock} in stock` });
+    }
+
     const totalAmount = quantity * unitPrice;
     const txn = await Transaction.create({ ...req.body, totalAmount });
+
+    // decrement stock on purchase, and keep the separate Inventory collection in sync
+    product.stock -= quantity;
+    await product.save();
+    await Inventory.findOneAndUpdate(
+      { productId: product._id },
+      { stockAvailable: product.stock, lastUpdated: new Date() },
+      { upsert: true }
+    );
+
     res.status(201).json(txn);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -12,7 +31,11 @@ export const createTransaction = async (req, res) => {
 };
 
 export const listTransactions = async (req, res) => {
-  const txns = await Transaction.find().sort({ createdAt: -1 });
+  const filter = req.query.customerId ? { customerId: req.query.customerId } : {};
+  const txns = await Transaction.find(filter)
+    .sort({ createdAt: -1 })
+    .populate("productId", "name imageUrl")
+    .populate("vendorId", "businessName");
   res.json(txns);
 };
 

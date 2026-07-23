@@ -9,7 +9,79 @@ dotenv.config();
 
 const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/shopsense";
 
-const CATEGORIES = ["Electronics", "Home & Kitchen", "Fashion", "Beauty", "Sports"];
+// Real product catalog per category. Each product gets its own search
+// keyword, used to fetch a genuine, content-matched photo from the Pexels
+// API at seed time (free, real curated stock photography - not a guessed
+// or unmoderated URL). If no PEXELS_API_KEY is set, falls back to Picsum
+// (real photography, but not content-matched) so seeding still works
+// out of the box.
+const CATALOG = {
+  Electronics: [
+    { name: "Wireless Bluetooth Earbuds", keyword: "wireless earbuds", seed: "shopsense-electronics-1" },
+    { name: "Smart Fitness Tracker Band", keyword: "fitness tracker watch", seed: "shopsense-electronics-2" },
+    { name: "Portable Bluetooth Speaker", keyword: "portable bluetooth speaker", seed: "shopsense-electronics-3" },
+    { name: "USB-C Fast Charging Cable", keyword: "usb c charging cable", seed: "shopsense-electronics-4" }
+  ],
+  "Home & Kitchen": [
+    { name: "Ceramic Coffee Mug Set", keyword: "ceramic coffee mug", seed: "shopsense-home-1" },
+    { name: "Stainless Steel Cooking Pot", keyword: "stainless steel cooking pot", seed: "shopsense-home-2" },
+    { name: "Non-Stick Frying Pan", keyword: "frying pan", seed: "shopsense-home-3" },
+    { name: "Bamboo Cutting Board", keyword: "wooden cutting board", seed: "shopsense-home-4" }
+  ],
+  Fashion: [
+    { name: "Cotton Crew Neck T-Shirt", keyword: "plain cotton t-shirt", seed: "shopsense-fashion-1" },
+    { name: "Slim Fit Denim Jeans", keyword: "denim jeans folded", seed: "shopsense-fashion-2" },
+    { name: "Canvas Tote Bag", keyword: "canvas tote bag", seed: "shopsense-fashion-3" },
+    { name: "Wool Blend Scarf", keyword: "wool scarf", seed: "shopsense-fashion-4" }
+  ],
+  Beauty: [
+    { name: "Vitamin C Face Serum", keyword: "skincare serum bottle", seed: "shopsense-beauty-1" },
+    { name: "Hydrating Face Moisturizer", keyword: "face moisturizer jar", seed: "shopsense-beauty-2" },
+    { name: "Herbal Shampoo Bar", keyword: "shampoo bar", seed: "shopsense-beauty-3" },
+    { name: "Matte Liquid Lipstick", keyword: "lipstick", seed: "shopsense-beauty-4" }
+  ],
+  Sports: [
+    { name: "Running Shoes", keyword: "running shoes", seed: "shopsense-sports-1" },
+    { name: "Yoga Mat", keyword: "rolled yoga mat", seed: "shopsense-sports-2" },
+    { name: "Adjustable Dumbbell Set", keyword: "dumbbells", seed: "shopsense-sports-3" },
+    { name: "Insulated Sports Water Bottle", keyword: "insulated water bottle", seed: "shopsense-sports-4" }
+  ]
+};
+const CATEGORIES = Object.keys(CATALOG);
+
+const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
+
+// Fetch a genuine, content-matched photo from Pexels for this product's
+// keyword. Falls back to Picsum (real photography, not content-matched) if
+// no API key is set, the request fails, or nothing is found - so seeding
+// always succeeds either way.
+const imageFor = async (item) => {
+  const fallback = `https://picsum.photos/seed/${item.seed}/400/400`;
+  if (!PEXELS_API_KEY) return fallback;
+
+  try {
+    const res = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(item.keyword)}&per_page=1&orientation=square`,
+      { headers: { Authorization: PEXELS_API_KEY } }
+    );
+    if (!res.ok) return fallback;
+    const data = await res.json();
+    const photo = data.photos?.[0];
+    return photo?.src?.medium || fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+// Sample customer emails so Milestone 2 segmentation/recommendations have
+// real groupings to work with, instead of every order being an anonymous guest.
+const SAMPLE_CUSTOMERS = [
+  "riya.sharma@example.com",
+  "arjun.mehta@example.com",
+  "priya.nair@example.com",
+  "kabir.singh@example.com",
+  "ananya.rao@example.com"
+];
 
 const randomFrom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -51,21 +123,26 @@ const run = async () => {
   );
   console.log(`Seeded ${vendors.length} vendors`);
 
-  // 2. Products (2-4 per vendor)
+  // 2. Products (2-4 per vendor, drawn from the real catalog for that vendor's category)
+  console.log(PEXELS_API_KEY ? "Fetching real product photos from Pexels..." : "No PEXELS_API_KEY set - using Picsum fallback images");
   const productDocs = [];
-  vendors.forEach((vendor) => {
-    const count = randomInt(2, 4);
+  for (const vendor of vendors) {
+    const items = [...CATALOG[vendor.category]]; // copy so we can pick without repeats per vendor
+    const count = randomInt(2, Math.min(4, items.length));
     for (let i = 0; i < count; i++) {
+      const idx = Math.floor(Math.random() * items.length);
+      const [item] = items.splice(idx, 1); // remove so this vendor doesn't repeat a product
+      const imageUrl = await imageFor(item);
       productDocs.push({
         vendorId: vendor._id,
-        name: `${vendor.businessName.split(" ")[0]} Item ${i + 1}`,
+        name: item.name,
         category: vendor.category,
         price: randomInt(199, 4999),
         stock: randomInt(10, 200),
-        imageUrl: `https://picsum.photos/seed/${encodeURIComponent(vendor.businessName)}${i}/300/300`
+        imageUrl
       });
     }
-  });
+  }
   const products = await Product.insertMany(productDocs);
   console.log(`Seeded ${products.length} products`);
 
@@ -80,8 +157,14 @@ const run = async () => {
     vendors.find((v) => v._id.equals(p.vendorId) && v.status === "Active")
   );
 
+  // Weighted so purchase frequency varies across customers - gives
+  // segmentation something real to show (High Value / Regular / New),
+  // rather than every customer landing in the same bucket.
+  const customerWeights = [5, 3, 3, 1, 1]; // riya & arjun buy often, ananya/kabir rarely
+  const weightedCustomerPool = SAMPLE_CUSTOMERS.flatMap((c, i) => Array(customerWeights[i]).fill(c));
+
   const txnDocs = [];
-  const txnCount = randomInt(25, 35);
+  const txnCount = randomInt(30, 45);
   for (let i = 0; i < txnCount; i++) {
     const product = randomFrom(activeProducts);
     const vendor = vendors.find((v) => v._id.equals(product.vendorId));
@@ -89,6 +172,7 @@ const run = async () => {
     txnDocs.push({
       vendorId: vendor._id,
       productId: product._id,
+      customerId: randomFrom(weightedCustomerPool),
       quantity,
       unitPrice: product.price,
       totalAmount: quantity * product.price,

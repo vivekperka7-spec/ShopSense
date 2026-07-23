@@ -9,6 +9,8 @@ import transactionRoutes from "./routes/transactionRoutes.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import inventoryRoutes from "./routes/inventoryRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
+import forecastRoutes from "./routes/forecastRoutes.js";
+import recommendationRoutes from "./routes/recommendationRoutes.js";
 
 dotenv.config();
 
@@ -22,6 +24,8 @@ app.use("/api/transactions", transactionRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/forecast", forecastRoutes);
+app.use("/api/recommendations", recommendationRoutes);
 
 app.get("/", (req, res) => res.send("ShopSense API is running"));
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 const STATUS_CLASS = { Active: "badge-active", Pending: "badge-pending", Suspended: "badge-suspended" };
-const EMPTY_FORM = { businessName: "", contactEmail: "", phone: "", category: "", commissionRate: "" };
+const EMPTY_FORM = { businessName: "", contactEmail: "", phone: "", category: "" };
 
 export default function Vendors() {
   const [vendors, setVendors] = useState([]);
@@ -30,8 +30,7 @@ export default function Vendors() {
       businessName: v.businessName,
       contactEmail: v.contactEmail,
       phone: v.phone || "",
-      category: v.category || "",
-      commissionRate: v.commissionRate ?? ""
+      category: v.category || ""
     });
   };
 
@@ -98,7 +97,6 @@ export default function Vendors() {
             <Field label="Contact email" type="email" value={form.contactEmail} onChange={handleChange("contactEmail")} required />
             <Field label="Phone" value={form.phone} onChange={handleChange("phone")} />
             <Field label="Category" value={form.category} onChange={handleChange("category")} placeholder="Electronics, Fashion..." />
-            <Field label="Commission rate (%)" type="number" value={form.commissionRate} onChange={handleChange("commissionRate")} />
 
             {errors.length > 0 && (
               <div style={{ background: "var(--red-soft)", color: "var(--red)", borderRadius: 8, padding: "10px 12px", fontSize: 13 }}>

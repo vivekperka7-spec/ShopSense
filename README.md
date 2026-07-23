@@ -122,3 +122,34 @@ shopsense/
         ├── Vendors.jsx    registration form + vendor management
         └── Products.jsx   catalog management
 ```
+
+## Milestone 2 additions
+
+### Inventory forecasting
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/api/forecast?productId=&days=7` | Predicts next 7-day stock need using a moving average of recent completed sales |
+| GET | `/api/forecast/history` | Past forecasts generated |
+
+Heuristic-based (moving average), not a statistical/ML forecasting model - a reasonable Milestone 2 starting point that's easy to explain and swap out later.
+
+### Customer segmentation
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/api/analytics/customer-segments` | Groups customers by spend/order count into New, Regular, High Value |
+
+Rule-based segmentation (thresholds on order count and total spend), not a clustering model.
+
+### Recommendations
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/api/recommendations/:customerId` | Suggests products in categories the customer has bought from before; falls back to best-sellers if no history |
+
+Content-based, category-affinity approach - not collaborative filtering.
+
+### Data validation
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/api/analytics/validate` | Cross-checks raw transaction sums against aggregated report totals |
+
+Directly demonstrates the "transactional consistency" requirement and doubles as Milestone 2's "validate analytical outputs" checkpoint.
