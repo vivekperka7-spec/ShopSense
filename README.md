@@ -14,6 +14,14 @@ A multi-vendor e-commerce analytics platform — built for vendors, customers, a
 
 ShopSense brings vendors, products, orders, and analytics together in one place. Vendors list products, customers shop and check out, and admins get real insights — revenue trends, inventory forecasts, customer segments, and product recommendations — all in a live dashboard.
 
+# Built with React, Node.js, Express, and MongoDB.
+
+Milestone 1 established the marketplace foundation: vendor onboarding with server-side validation, a product catalog linked to vendors via Mongoose references, inventory tracked as a separate collection kept in sync with product stock, and a live dashboard using MongoDB aggregation pipelines to compute revenue trends and product/vendor performance.
+
+Milestone 2 added an analytics layer on top of that data: inventory forecasting using a moving average of recent transaction history to predict restock needs, customer segmentation grouping shoppers into New/Regular/High Value tiers based on order count and spend, a recommendation engine suggesting products via category affinity from a customer's purchase history, and a validation endpoint that cross-checks raw transaction sums against aggregated report totals to confirm data consistency. These are intentionally simple, explainable models (moving average, rule-based thresholds, category matching) rather than trained ML — a deliberate choice for this stage, with FastAPI-based ML models planned for a later milestone.
+
+Also added: a full customer shopping flow (cart, checkout, order history, wishlist) and three role-based views (Admin, Vendor, Customer) built on top of the same backend.
+
 ## ✨ Features
 
 - 🏪 **Vendor onboarding** with validation and approval workflow
