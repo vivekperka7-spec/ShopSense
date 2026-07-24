@@ -22,6 +22,10 @@ Milestone 2 added an analytics layer on top of that data: inventory forecasting 
 
 Also added: a full customer shopping flow (cart, checkout, order history, wishlist) and three role-based views (Admin, Vendor, Customer) built on top of the same backend.
 
+# Architecture
+
+<img width="2720" height="2440" alt="shopsense_milestone_flow" src="https://github.com/user-attachments/assets/0e930e04-6e0b-4c6d-b7c1-f7b24382096e" />
+
 ## ✨ Features
 
 - 🏪 **Vendor onboarding** with validation and approval workflow
