@@ -1,8 +1,6 @@
 # ShopSense
 
-A multi-vendor e-commerce analytics platform. Vendors register and manage a product catalog, transactions get logged against that catalog, and an aggregation layer turns raw orders into revenue and performance reporting for marketplace admins.
-
-Built for **Milestone 1**: vendor onboarding, product catalog, inventory tracking, and baseline sales analytics.
+A multi-vendor e-commerce analytics platform. Vendors manage a product catalog, customers browse and buy, and an analytics layer turns transactions into revenue reports, inventory forecasts, customer segments, and recommendations.
 
 ## Stack
 
@@ -11,73 +9,58 @@ Built for **Milestone 1**: vendor onboarding, product catalog, inventory trackin
 | Database | MongoDB + Mongoose |
 | API | Node.js + Express |
 | Frontend | React (Vite) + Recharts |
-| Aggregation | MongoDB aggregation pipelines |
 
 ## Architecture
 
 ```
-React dashboard (localhost:5173)
+React app (localhost:5173)
         |  REST calls, proxied by Vite
         v
 Express API (localhost:5000)
         |  Mongoose
         v
-MongoDB  ->  vendors, products, inventory, transactions, wishlists
+MongoDB  ->  vendors, products, inventory, transactions, wishlists, forecasts
 ```
 
-Vendor and product writes stay in their own collections; inventory is tracked separately from product stock so it can be adjusted independently of catalog edits. Every transaction stores `totalAmount` at write time, so the revenue and vendor-performance reports read directly off that field instead of recomputing totals on the fly.
+## Roles
+
+The app has three views, chosen at login (a role switcher, not real password-based auth yet):
+
+- **Admin** — manages vendors, products, and views all analytics
+- **Vendor** — manages their own product catalog
+- **Customer** — shops, adds to cart, checks out, views orders and wishlist
+
+## What each milestone covers
+
+### Milestone 1 — Marketplace foundation
+- Vendor onboarding with validation (`POST /api/vendors`)
+- Product catalog, tied to vendors (`/api/products`)
+- Inventory tracked separately from product stock (`/api/inventory`)
+- Revenue dashboard: daily revenue chart, product performance, vendor revenue report
+
+### Milestone 2 — Intelligence layer
+- **Inventory forecasting** (`GET /api/forecast?productId=&days=7`) — predicts next week's stock need from a moving average of recent sales
+- **Customer segmentation** (`GET /api/analytics/customer-segments`) — groups customers into New / Regular / High Value by spend and order count
+- **Recommendations** (`GET /api/recommendations/:customerId`) — suggests products from categories a customer has bought before
+- **Data validation** (`GET /api/analytics/validate`) — checks raw transaction totals match the aggregated report totals
+
+All four use simple, explainable logic (moving average, rule-based thresholds, category matching) rather than trained ML models — a deliberate choice for this stage.
+
+### Shopping experience (Customer role)
+- Browse products, add to cart with quantity, checkout
+- Order history (`GET /api/transactions?customerId=`)
+- Wishlist (`/api/wishlist`)
 
 ## Data model
 
-**Vendor** — `businessName`, `contactEmail` (unique), `phone`, `category`, `commissionRate`, `status` (`Pending` / `Active` / `Suspended`)
-
-**Product** — `vendorId` (ref), `name`, `category`, `price`, `stock`
-
-**Inventory** — `productId` (ref, unique), `stockAvailable`, `lastUpdated` — kept in sync automatically on product create/update/delete
-
-**Transaction** — `vendorId`, `productId`, `quantity`, `unitPrice`, `totalAmount`, `status` (`Completed` / `Refunded` / `Pending`)
-
-**Wishlist** — `customerId`, `productIds[]`
-
-## API
-
-### Vendors
-| Method | Route | Purpose |
-|---|---|---|
-| POST | `/api/vendors` | Register a vendor (validates name + email format) |
-| GET | `/api/vendors` | List vendors, optional `?status=Active` |
-| PUT | `/api/vendors/:id` | Edit vendor details |
-| PATCH | `/api/vendors/:id/status` | Approve / suspend a vendor |
-
-### Products
-| Method | Route | Purpose |
-|---|---|---|
-| POST | `/api/products` | Add a product (creates a matching inventory record) |
-| GET | `/api/products` | List products, optional `?vendorId=` |
-| PUT | `/api/products/:id` | Edit a product |
-| DELETE | `/api/products/:id` | Remove a product |
-
-### Inventory
-| Method | Route | Purpose |
-|---|---|---|
-| GET | `/api/inventory` | List all inventory records |
-| GET | `/api/inventory/low-stock?threshold=10` | Products at or below a stock threshold |
-| PATCH | `/api/inventory/:productId` | Update stock available |
-
-### Transactions & analytics
-| Method | Route | Purpose |
-|---|---|---|
-| POST | `/api/transactions` | Log a transaction |
-| GET | `/api/transactions` | List transactions |
-| GET | `/api/transactions/analytics/baseline` | Revenue-by-day + product performance, powers the dashboard |
-| GET | `/api/analytics/revenue-report` | Revenue and units sold grouped by vendor |
-
-### Wishlist
-| Method | Route | Purpose |
-|---|---|---|
-| POST | `/api/wishlist` | Add a product to a customer's wishlist |
-| GET | `/api/wishlist/:customerId` | Get a customer's wishlist |
-| DELETE | `/api/wishlist` | Remove a product from a wishlist |
+| Model | Key fields |
+|---|---|
+| Vendor | businessName, contactEmail, status (Pending/Active/Suspended) |
+| Product | vendorId, name, category, price, stock, imageUrl |
+| Inventory | productId, stockAvailable |
+| Transaction | vendorId, productId, customerId, quantity, totalAmount, status |
+| Wishlist | customerId, productIds[] |
+| InventoryForecast | productId, predictedStock, confidenceLevel |
 
 ## Running it locally
 
@@ -91,65 +74,33 @@ npm run seed               # loads mock vendors, products, inventory, transactio
 npm run dev                 # API on http://localhost:5000
 ```
 
+**Real product photos (optional):** get a free key at https://www.pexels.com/api/ and add it to `.env` as `PEXELS_API_KEY=...`. Without a key, seeding still works — it just uses generic stock photos instead of ones matched to each product.
+
 ```bash
 cd frontend
 npm install
-npm run dev                 # dashboard on http://localhost:5173
+npm run dev                 # app on http://localhost:5173
 ```
-
-## Demonstrating the Milestone 1 criteria
-
-**Vendor onboarding validates registrations** — `POST /api/vendors` with a malformed email or missing name returns a 400 with specific validation messages; visible live in the Vendors page's registration form.
-
-**Revenue reporting stays consistent with orders** — `totalAmount` is computed once, at the moment a transaction is written, and every aggregation (`baseline`, `revenue-report`) sums directly off that stored field rather than recalculating from unit price and quantity separately.
-
-**Dashboards visualize vendor and product performance** — the dashboard's revenue chart and product performance table cover the product side; `revenue-report` covers vendor-level totals for side-by-side comparison.
 
 ## Project structure
 
 ```
 shopsense/
 ├── backend/
-│   ├── models/          vendor, product, inventory, transaction, wishlist
+│   ├── models/          vendor, product, inventory, transaction, wishlist, inventoryForecast
 │   ├── controllers/     business logic per resource
 │   ├── routes/          Express route definitions
 │   ├── seed.js          mock data generator
 │   └── server.js        app entry point
 └── frontend/
     └── src/
-        ├── App.jsx        sidebar + page routing
-        ├── Dashboard.jsx  revenue chart, stat cards, product/vendor tables
-        ├── Vendors.jsx    registration form + vendor management
-        └── Products.jsx   catalog management
+        ├── App.jsx        role-based routing + sidebar
+        ├── Landing.jsx     login / role picker
+        ├── Dashboard.jsx   revenue chart, stat cards
+        ├── Vendors.jsx     vendor management (Admin)
+        ├── Products.jsx    catalog management (Admin/Vendor) + storefront (Customer)
+        ├── Cart.jsx        cart + checkout (Customer)
+        ├── Orders.jsx      order history (Customer)
+        ├── Wishlist.jsx    saved products (Customer)
+        └── Insights.jsx    forecasting, segmentation, validation (Admin)
 ```
-
-## Milestone 2 additions
-
-### Inventory forecasting
-| Method | Route | Purpose |
-|---|---|---|
-| GET | `/api/forecast?productId=&days=7` | Predicts next 7-day stock need using a moving average of recent completed sales |
-| GET | `/api/forecast/history` | Past forecasts generated |
-
-Heuristic-based (moving average), not a statistical/ML forecasting model - a reasonable Milestone 2 starting point that's easy to explain and swap out later.
-
-### Customer segmentation
-| Method | Route | Purpose |
-|---|---|---|
-| GET | `/api/analytics/customer-segments` | Groups customers by spend/order count into New, Regular, High Value |
-
-Rule-based segmentation (thresholds on order count and total spend), not a clustering model.
-
-### Recommendations
-| Method | Route | Purpose |
-|---|---|---|
-| GET | `/api/recommendations/:customerId` | Suggests products in categories the customer has bought from before; falls back to best-sellers if no history |
-
-Content-based, category-affinity approach - not collaborative filtering.
-
-### Data validation
-| Method | Route | Purpose |
-|---|---|---|
-| GET | `/api/analytics/validate` | Cross-checks raw transaction sums against aggregated report totals |
-
-Directly demonstrates the "transactional consistency" requirement and doubles as Milestone 2's "validate analytical outputs" checkpoint.
