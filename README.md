@@ -51,7 +51,7 @@ Open `http://localhost:5173` and pick a role to get started.
 
 <div align="center">
 
-Built by **Vivek**
+Built by **Vivek Perka**
 
 *Marketplace Vision, Simplified.*
 
