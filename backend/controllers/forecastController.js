@@ -21,7 +21,7 @@ export const forecastInventory = async (req, res) => {
       productId,
       status: "Completed",
       createdAt: { $gte: since }
-    });
+    }).sort({ createdAt: 1 });
 
     const totalSold = transactions.reduce((sum, t) => sum + t.quantity, 0);
     const avgDailySales = totalSold / Number(days);
@@ -36,12 +36,28 @@ export const forecastInventory = async (req, res) => {
       confidenceLevel
     });
 
+    // Build a day-by-day sales series over the window so the chart reflects
+    // this specific product's actual pattern, not a generic comparison.
+    const dailySales = {};
+    for (let i = Number(days) - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const key = d.toISOString().slice(0, 10);
+      dailySales[key] = 0;
+    }
+    transactions.forEach((t) => {
+      const key = t.createdAt.toISOString().slice(0, 10);
+      if (dailySales[key] !== undefined) dailySales[key] += t.quantity;
+    });
+    const salesSeries = Object.entries(dailySales).map(([date, quantitySold]) => ({ date, quantitySold }));
+
     res.json({
       ...forecast.toObject(),
       productName: product.name,
       currentStock: product.stock,
       basedOnOrders: transactions.length,
-      restockNeeded: predictedStock > product.stock
+      restockNeeded: predictedStock > product.stock,
+      salesSeries,
+      avgDailySales: Math.round(avgDailySales * 10) / 10
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

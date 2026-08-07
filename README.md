@@ -36,11 +36,13 @@ Also added: a full customer shopping flow (cart, checkout, order history, wishli
 - 🎯 **Customer segmentation** — groups shoppers by value and activity
 - 💡 **Smart recommendations** — personalized product suggestions
 - ✅ **Data validation** — keeps reported numbers honest
+- 🧠 **ML-powered forecasting** — a trained model tracked with MLflow, alongside GMV, margin, and vendor benchmarking
+- 📈 **BI dashboard** — interactive charts with CSV export, built with Streamlit
 - 👥 **Three views** — Admin, Vendor, and Customer, each tailored to the role
 
 ## 🛠️ Built with
 
-**React** · **Node.js** · **Express** · **MongoDB** · **Recharts**
+**React** · **Node.js** · **Express** · **MongoDB** · **Recharts** · **Python** · **FastAPI** · **scikit-learn** · **MLflow** · **Streamlit**
 
 ## 🚀 Getting started
 
@@ -58,6 +60,10 @@ npm run dev
 ```
 
 Open `http://localhost:5173` and pick a role to get started.
+
+### Advanced analytics (optional)
+
+The `analytics-service` folder adds Python-based ML forecasting and a BI dashboard, reading from the same database — see `analytics-service/README.md` for setup.
 
 ---
 

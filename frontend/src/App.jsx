@@ -7,12 +7,14 @@ import Wishlist from "./Wishlist.jsx";
 import Insights from "./Insights.jsx";
 import Cart from "./Cart.jsx";
 import Orders from "./Orders.jsx";
+import VendorAnalytics from "./VendorAnalytics.jsx";
+import CustomerAnalytics from "./CustomerAnalytics.jsx";
 import Logo from "./Logo.jsx";
 
 const NAV_BY_ROLE = {
   Admin: ["Dashboard", "Vendors", "Products", "Insights", "Transactions"],
-  Vendor: ["Dashboard", "Products"],
-  Customer: ["Shop", "Cart", "Orders", "Wishlist"]
+  Vendor: ["Dashboard", "Products", "Analytics"],
+  Customer: ["Shop", "Cart", "Orders", "Wishlist", "My Spending"]
 };
 
 const DEFAULT_PAGE = {
@@ -103,6 +105,7 @@ export default function App() {
         {page === "Dashboard" && <Dashboard />}
         {page === "Vendors" && role === "Admin" && <Vendors />}
         {page === "Products" && (role === "Admin" || role === "Vendor") && <Products role={role} />}
+        {page === "Analytics" && role === "Vendor" && <VendorAnalytics />}
         {page === "Insights" && role === "Admin" && <Insights />}
         {page === "Shop" && role === "Customer" && (
           <Products role={role} customerId={email} onAddToCart={addToCart} />
@@ -118,6 +121,7 @@ export default function App() {
         )}
         {page === "Orders" && role === "Customer" && <Orders customerId={email} />}
         {page === "Wishlist" && role === "Customer" && <Wishlist customerId={email} />}
+        {page === "My Spending" && role === "Customer" && <CustomerAnalytics customerId={email} />}
         {page === "Transactions" && role === "Admin" && (
           <div className="panel">
             <div className="panel-head"><h2>Transactions</h2></div>

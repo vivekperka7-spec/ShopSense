@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { exportAnalyticsPdf } from "./utils/exportPdf.js";
 
 const SEGMENT_CLASS = { "High Value": "badge-active", Regular: "badge-pending", New: "badge-suspended" };
 const SEGMENT_COLOR = { "High Value": "#0F6E56", Regular: "#B5730B", New: "#A32D2D" };
+const FASTAPI_BASE = "http://localhost:8000";
 
 export default function Insights() {
   const [products, setProducts] = useState([]);
@@ -13,20 +15,94 @@ export default function Insights() {
 
   const [segments, setSegments] = useState(null);
   const [validation, setValidation] = useState(null);
+  const [baseline, setBaseline] = useState(null);
+  const [lowStock, setLowStock] = useState([]);
+  const [ranking, setRanking] = useState(null);
+  const [rankingError, setRankingError] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/products").then((r) => r.json()),
       fetch("/api/analytics/customer-segments").then((r) => r.json()),
-      fetch("/api/analytics/validate").then((r) => r.json())
-    ]).then(([p, seg, val]) => {
+      fetch("/api/analytics/validate").then((r) => r.json()),
+      fetch("/api/transactions/analytics/baseline").then((r) => r.json()),
+      fetch("/api/inventory/low-stock").then((r) => r.json())
+    ]).then(([p, seg, val, base, low]) => {
       setProducts(p);
       setSegments(seg);
       setValidation(val);
+      setBaseline(base);
+      setLowStock(low);
       setLoading(false);
     });
+
+    // Vendor benchmarking lives in the Python/FastAPI service (Milestone 3),
+    // not the Node backend - fetched separately, with a clear message if
+    // that service isn't running rather than a silent failure.
+    fetch(`${FASTAPI_BASE}/vendors/ranking`)
+      .then((r) => {
+        if (!r.ok) throw new Error("Service returned an error");
+        return r.json();
+      })
+      .then(setRanking)
+      .catch(() => setRankingError("Can't reach the analytics service — start it with `uvicorn app.main:app --reload --port 8000` in analytics-service/"));
   }, []);
+
+  // Simple rule-based suggestions, not a trained recommendation model -
+  // combines top sellers, segment mix, and low-stock data already loaded
+  // above into short, explainable action items.
+  const buildSuggestions = () => {
+    const suggestions = [];
+    if (baseline?.productPerformance?.[0]) {
+      suggestions.push(
+        `"${baseline.productPerformance[0].name}" is your top seller this period — consider featuring it or bundling it with slower-moving items.`
+      );
+    }
+    if (segments?.summary?.["High Value"]) {
+      suggestions.push(
+        `You have ${segments.summary["High Value"]} High Value customer${segments.summary["High Value"] > 1 ? "s" : ""} — a loyalty offer or early access to new products could improve retention.`
+      );
+    }
+    if (segments?.summary?.["New"]) {
+      suggestions.push(
+        `${segments.summary["New"]} customer${segments.summary["New"] > 1 ? "s are" : " is"} still New — a first-order discount could turn them into Regulars.`
+      );
+    }
+    if (lowStock.length > 0) {
+      suggestions.push(
+        `${lowStock.length} product${lowStock.length > 1 ? "s are" : " is"} running low on stock (${lowStock.slice(0, 2).map((l) => l.productId?.name).filter(Boolean).join(", ")}${lowStock.length > 2 ? ", ..." : ""}) — restock soon to avoid missed sales.`
+      );
+    }
+    if (suggestions.length === 0) {
+      suggestions.push("Not enough data yet for suggestions — seed the database or make a few purchases first.");
+    }
+    return suggestions;
+  };
+
+  const handleExportPdf = () => {
+    exportAnalyticsPdf({
+      title: "ShopSense Admin Analytics Report",
+      subtitle: "Revenue, customer segments, and vendor performance",
+      stats: [
+        { label: "Total Revenue", value: `\u20b9${(baseline?.totalRevenue || 0).toLocaleString("en-IN")}` },
+        { label: "Customers", value: segments?.customers?.length || 0 },
+        { label: "High Value", value: segments?.summary?.["High Value"] || 0 }
+      ],
+      tables: [
+        {
+          heading: "Customer Segments",
+          columns: ["Customer", "Orders", "Spent (\u20b9)", "Segment"],
+          rows: (segments?.customers || []).map((c) => [c.customerId, c.orderCount, c.totalSpent.toLocaleString("en-IN"), c.segment])
+        },
+        {
+          heading: "Vendor Benchmarking",
+          columns: ["Rank", "Vendor", "Revenue (\u20b9)", "Orders", "Fulfillment %"],
+          rows: (ranking || []).map((v) => [v.rank, v.businessName, v.revenue.toLocaleString("en-IN"), v.totalOrders, v.fulfillmentRate])
+        }
+      ]
+    });
+  };
 
   const runForecast = async () => {
     if (!selectedProduct) return;
@@ -54,6 +130,62 @@ export default function Insights() {
           <h1>Insights</h1>
           <div className="sub">Inventory forecasting, customer segmentation &amp; data validation</div>
         </div>
+        <button
+          onClick={handleExportPdf}
+          style={{
+            background: "var(--navy)", color: "#fff", border: "none", borderRadius: 8,
+            padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer"
+          }}
+        >
+          Export as PDF
+        </button>
+      </div>
+
+      {/* AI Suggestions */}
+      <div className="panel">
+        <div className="panel-head">
+          <h2>AI Suggestions</h2>
+          <span className="hint">Rule-based, not a trained model</span>
+        </div>
+        {loading ? (
+          <div className="skeleton" style={{ height: 60 }} />
+        ) : (
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.8 }}>
+            {buildSuggestions().map((s, i) => (
+              <li key={i}>{s}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Vendor Benchmarking */}
+      <div className="panel">
+        <div className="panel-head">
+          <h2>Vendor Benchmarking</h2>
+          <span className="hint">From the analytics service</span>
+        </div>
+        {rankingError ? (
+          <p style={{ color: "var(--ink-faint)", fontSize: 13 }}>{rankingError}</p>
+        ) : !ranking ? (
+          <div className="skeleton" style={{ height: 100 }} />
+        ) : (
+          <table>
+            <thead>
+              <tr><th>#</th><th>Vendor</th><th>Revenue</th><th>Orders</th><th>Fulfillment</th></tr>
+            </thead>
+            <tbody>
+              {ranking.map((v) => (
+                <tr key={v.vendorId}>
+                  <td className="mono">{v.rank}</td>
+                  <td>{v.businessName}</td>
+                  <td className="mono">&#8377;{v.revenue.toLocaleString("en-IN")}</td>
+                  <td className="mono">{v.totalOrders}</td>
+                  <td className="mono">{v.fulfillmentRate}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Inventory forecast */}
@@ -110,22 +242,34 @@ export default function Insights() {
                 </div>
               </div>
             </div>
-            <div style={{ height: 160 }}>
+            <div style={{ height: 200 }}>
               <ResponsiveContainer>
                 <BarChart
-                  layout="vertical"
-                  data={[{ name: forecast.productName, "Current stock": forecast.currentStock, "Predicted need": forecast.predictedStock }]}
-                  margin={{ left: 10 }}
+                  data={[
+                    ...forecast.salesSeries.map((d) => ({
+                      label: d.date.slice(5),
+                      units: d.quantitySold,
+                      type: "history"
+                    })),
+                    { label: "Next 7d avg/day", units: forecast.avgDailySales, type: "forecast" }
+                  ]}
+                  margin={{ left: -10 }}
                 >
-                  <CartesianGrid horizontal={false} stroke="var(--line)" />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: "var(--ink-faint)" }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} width={140} />
-                  <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="Current stock" fill="#8B909A" radius={[0, 4, 4, 0]} barSize={22} />
-                  <Bar dataKey="Predicted need" fill={forecast.restockNeeded ? "#A32D2D" : "#0F6E56"} radius={[0, 4, 4, 0]} barSize={22} />
+                  <CartesianGrid vertical={false} stroke="var(--line)" />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: "var(--ink-faint)" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "var(--ink-faint)" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip formatter={(value, name, props) => [value, props.payload.type === "forecast" ? "Predicted avg/day" : "Units sold"]} />
+                  <Bar dataKey="units" radius={[4, 4, 0, 0]} barSize={26}>
+                    {forecast.salesSeries.map((_, i) => (
+                      <Cell key={i} fill="#8B909A" />
+                    ))}
+                    <Cell fill={forecast.restockNeeded ? "#A32D2D" : "#0F6E56"} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--ink-faint)", marginTop: 8, textAlign: "center" }}>
+              Grey bars = actual daily sales over the last {forecast.windowDays} days &middot; colored bar = predicted average for next week
             </div>
           </>
         )}
@@ -171,6 +315,25 @@ export default function Insights() {
                     </span>
                   ))}
                 </div>
+              </div>
+              <div style={{ height: Math.min(segments.customers.length, 5) * 34 + 20, marginBottom: 16 }}>
+                <ResponsiveContainer>
+                  <BarChart
+                    layout="vertical"
+                    data={segments.customers.slice(0, 5).map((c) => ({ name: c.customerId.split("@")[0], spent: c.totalSpent, segment: c.segment }))}
+                    margin={{ left: 10 }}
+                  >
+                    <CartesianGrid horizontal={false} stroke="var(--line)" />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: "var(--ink-faint)" }} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={80} />
+                    <Tooltip formatter={(v) => [`\u20b9${v.toLocaleString("en-IN")}`, "Total spent"]} />
+                    <Bar dataKey="spent" radius={[0, 4, 4, 0]} barSize={18}>
+                      {segments.customers.slice(0, 5).map((c, i) => (
+                        <Cell key={i} fill={SEGMENT_COLOR[c.segment] || "#8B909A"} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
               <table>
                 <thead>

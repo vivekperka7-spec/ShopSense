@@ -49,14 +49,35 @@ const CATALOG = {
 };
 const CATEGORIES = Object.keys(CATALOG);
 
+// Fallback visual when no Pexels key is set or a search comes up empty:
+// a clean icon on a category-colored background, generated locally with
+// zero network dependency - matches the product's category (unlike a
+// random unrelated stock photo), and can never fail to load.
+const CATEGORY_STYLE = {
+  Electronics: { color: "#2563EB", icon: "\u{1F3A7}" },
+  "Home & Kitchen": { color: "#D97706", icon: "\u{1F373}" },
+  Fashion: { color: "#7C3AED", icon: "\u{1F455}" },
+  Beauty: { color: "#DB2777", icon: "\u{1F484}" },
+  Sports: { color: "#059669", icon: "\u{1F45F}" }
+};
+
+const iconFallback = (category) => {
+  const style = CATEGORY_STYLE[category] || { color: "#334155", icon: "\u{1F4E6}" };
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'>
+    <rect width='400' height='400' fill='${style.color}'/>
+    <text x='50%' y='50%' font-size='140' text-anchor='middle' dominant-baseline='central'>${style.icon}</text>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
 
 // Fetch a genuine, content-matched photo from Pexels for this product's
-// keyword. Falls back to Picsum (real photography, not content-matched) if
-// no API key is set, the request fails, or nothing is found - so seeding
-// always succeeds either way.
-const imageFor = async (item) => {
-  const fallback = `https://picsum.photos/seed/${item.seed}/400/400`;
+// keyword. Falls back to a category-matched icon (not an unrelated random
+// photo) if no API key is set, the request fails, or nothing is found -
+// so seeding always succeeds, and images are always at least relevant.
+const imageFor = async (item, category) => {
+  const fallback = iconFallback(category);
   if (!PEXELS_API_KEY) return fallback;
 
   try {
@@ -132,7 +153,7 @@ const run = async () => {
     for (let i = 0; i < count; i++) {
       const idx = Math.floor(Math.random() * items.length);
       const [item] = items.splice(idx, 1); // remove so this vendor doesn't repeat a product
-      const imageUrl = await imageFor(item);
+      const imageUrl = await imageFor(item, vendor.category);
       productDocs.push({
         vendorId: vendor._id,
         name: item.name,

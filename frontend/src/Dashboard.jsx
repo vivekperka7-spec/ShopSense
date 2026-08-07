@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { exportAnalyticsPdf } from "./utils/exportPdf.js";
 
 const STATUS_CLASS = { Active: "badge-active", Pending: "badge-pending", Suspended: "badge-suspended" };
 
@@ -59,6 +60,30 @@ export default function Dashboard() {
   const activeVendors = vendors.filter((v) => v.status === "Active").length;
   const maxQty = Math.max(...data.productPerformance.map((p) => p.quantitySold), 1);
 
+  const handleExportPdf = () => {
+    exportAnalyticsPdf({
+      title: "ShopSense Dashboard Report",
+      subtitle: "Revenue overview and product performance",
+      stats: [
+        { label: "Total Revenue", value: `\u20b9${data.totalRevenue.toLocaleString("en-IN")}` },
+        { label: "Active Vendors", value: `${activeVendors} / ${vendors.length}` },
+        { label: "Products Listed", value: products.length }
+      ],
+      tables: [
+        {
+          heading: "Product Performance",
+          columns: ["Product", "Quantity Sold"],
+          rows: data.productPerformance.map((p) => [p.name, p.quantitySold])
+        },
+        {
+          heading: "Vendors",
+          columns: ["Vendor", "Status"],
+          rows: vendors.map((v) => [v.businessName, v.status])
+        }
+      ]
+    });
+  };
+
   return (
     <div>
       <div className="topbar">
@@ -66,6 +91,15 @@ export default function Dashboard() {
           <h1>Dashboard</h1>
           <div className="sub">Weeks 1&ndash;2 &middot; marketplace overview</div>
         </div>
+        <button
+          onClick={handleExportPdf}
+          style={{
+            background: "var(--navy)", color: "#fff", border: "none", borderRadius: 8,
+            padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer"
+          }}
+        >
+          Export as PDF
+        </button>
       </div>
 
       <div className="stat-grid">

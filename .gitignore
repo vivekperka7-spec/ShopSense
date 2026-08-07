@@ -1,15 +1,26 @@
-# Dependencies
+# Node dependencies
 node_modules/
 backend/node_modules/
 frontend/node_modules/
 
-# Environment variables (contains your MongoDB connection string)
+# Environment variables (contain secrets - MongoDB URI, API keys)
 .env
 backend/.env
+analytics-service/.env
 
-# Build output
+# Frontend build output
 frontend/dist/
 frontend/build/
+
+# Python
+__pycache__/
+*.pyc
+analytics-service/venv/
+analytics-service/.venv/
+
+# MLflow local tracking data (generated, not source)
+analytics-service/mlruns/
+analytics-service/mlartifacts/
 
 # Logs
 *.log
